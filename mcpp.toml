@@ -1,0 +1,303 @@
+# The compiler-rt builtins as a SOURCE package.
+#
+# ⭐⭐ TWO PACKAGES RATHER THAN ONE, AND THE EDGE IS THE REASON.
+#
+# picolibc's  formats floats through ryu, which calls routines the
+# compiler emits references to and no C library defines — and on rv64 a 128-bit
+# shift the instruction set has no instruction for. A C library that carried its
+# own copy would be wrong for anyone supplying their own builtins; a dependency
+# edge says the same thing and can be overridden.
+#
+# ⭐ AND IT IS A SOURCE PACKAGE FOR THE SAME REASON picolibc IS. Built with the
+# consuming program's own , so the builtins a program links are
+# by construction the ones its own compiler would have emitted calls to. A
+# prebuilt would have to ship one archive per ABI, under a name the consumer
+# must guess — and compiler-rt does not even spell the target the way mcpp does:
+# it refuses a  triple outright, producing a build tree with no builtins
+# target at all while cmake reports success.
+#
+# ⚠️ THE SOURCE LIST IS UPSTREAM'S CMAKE SELECTION, READ OUT OF A REAL BUILD.
+# The exclusions are its complement for ARM:
+#
+#   *tf*, *xf*, *bf*     128-bit, 80-bit and bfloat, which ARM has none of
+#   atomic*, emutls      hosted facilities a freestanding image does not link
+#   crtbegin/crtend      the C runtime's, not the builtins'
+#   divsi3, clzsi2, …    superseded by the machine directory below
+#
+# ⚠️ AND THE VFP ASSEMBLY IS EXCLUDED ON EVERY ROW, DELIBERATELY. Upstream's
+# CMake adds  only where the target has an FPU — measured, 0 files
+# on armv6-m, 16 on armv7e-m, 34 on armv8-m.main — which would make the source
+# list depend on the float ABI as well as the architecture. Those files are
+# legacy VFP-calling-convention aliases; the generic C routines they shadow are
+# correct on every profile, so one list serves all seven and the selection
+# problem disappears.
+[package]
+namespace   = "mcpplibs"
+name        = "compiler-rt-builtins"
+version     = "22.1.8"
+description = "The compiler-rt builtins as a source package: the routines a compiler emits calls to, compiled with the consuming program's own flags"
+license     = "Apache-2.0 WITH LLVM-exception"
+authors     = ["mcpplibs"]
+repo        = "https://github.com/mcpplibs/compiler-rt-builtins"
+
+# ⭐ THE LAYER NAME IS THE ENGINE'S, NOT THIS PACKAGE'S. mcpp resolves five
+# target-side layers and this is one of them — "the compiler's own runtime
+# (builtins, unwinder)". Inventing `mcpp:compiler-builtins` was refused by name,
+# which is the behaviour that keeps the `mcpp:` prefix meaning one thing.
+provides    = ["mcpp:compiler-runtime=compiler-rt"]
+
+[build]
+language     = "c11"
+import_std   = false
+include_dirs = ["builtins"]
+sources = [
+  "builtins/*.c",
+
+  # ⚠️ NO MACHINE EXCLUSIONS HERE, AND THEY WOULD BE WORSE THAN REDUNDANT.
+  # `builtins/*.c` is not recursive, so no machine directory is matched in the
+  # first place — and a negative glob in the base set is applied to the MERGED
+  # set, so `!builtins/arm/**` would cancel the per-target block that adds them
+  # back. Measured: with the exclusion present, `mcpp build --target
+  # thumbv7m-none-eabi` compiled 770 objects and not one from `builtins/arm`,
+  # and the link failed on `__aeabi_uldivmod`.
+
+  "!builtins/addtf3.c",
+  "!builtins/atomic.c",
+  "!builtins/atomic_flag_clear.c",
+  "!builtins/atomic_flag_clear_explicit.c",
+  "!builtins/atomic_flag_test_and_set.c",
+  "!builtins/atomic_flag_test_and_set_explicit.c",
+  "!builtins/atomic_signal_fence.c",
+  "!builtins/atomic_thread_fence.c",
+  "!builtins/bswapdi2.c",
+  "!builtins/bswapsi2.c",
+  "!builtins/clzdi2.c",
+  "!builtins/clzsi2.c",
+  "!builtins/comparesf2.c",
+  "!builtins/comparetf2.c",
+  "!builtins/crtbegin.c",
+  "!builtins/crtend.c",
+  "!builtins/divmodsi4.c",
+  "!builtins/divsi3.c",
+  "!builtins/divtc3.c",
+  "!builtins/divtf3.c",
+  "!builtins/divxc3.c",
+  "!builtins/emutls.c",
+  "!builtins/enable_execute_stack.c",
+  "!builtins/eprintf.c",
+  "!builtins/extendbfsf2.c",
+  "!builtins/extenddftf2.c",
+  "!builtins/extendhftf2.c",
+  "!builtins/extendhfxf2.c",
+  "!builtins/extendsftf2.c",
+  "!builtins/extendxftf2.c",
+  "!builtins/fixtfdi.c",
+  "!builtins/fixtfsi.c",
+  "!builtins/fixtfti.c",
+  "!builtins/fixunstfdi.c",
+  "!builtins/fixunstfsi.c",
+  "!builtins/fixunstfti.c",
+  "!builtins/fixunsxfdi.c",
+  "!builtins/fixunsxfsi.c",
+  "!builtins/fixunsxfti.c",
+  "!builtins/fixxfdi.c",
+  "!builtins/fixxfti.c",
+  "!builtins/floatditf.c",
+  "!builtins/floatdixf.c",
+  "!builtins/floatsitf.c",
+  "!builtins/floattitf.c",
+  "!builtins/floattixf.c",
+  "!builtins/floatunditf.c",
+  "!builtins/floatundixf.c",
+  "!builtins/floatunsitf.c",
+  "!builtins/floatuntitf.c",
+  "!builtins/floatuntixf.c",
+  "!builtins/fp_mode.c",
+  "!builtins/modsi3.c",
+  "!builtins/multc3.c",
+  "!builtins/multf3.c",
+  "!builtins/mulxc3.c",
+  "!builtins/powitf2.c",
+  "!builtins/powixf2.c",
+  "!builtins/subtf3.c",
+  "!builtins/truncdfbf2.c",
+  "!builtins/truncsfbf2.c",
+  "!builtins/trunctfbf2.c",
+  "!builtins/trunctfdf2.c",
+  "!builtins/trunctfhf2.c",
+  "!builtins/trunctfsf2.c",
+  "!builtins/trunctfxf2.c",
+  "!builtins/truncxfbf2.c",
+  "!builtins/truncxfhf2.c",
+  "!builtins/udivmodsi4.c",
+  "!builtins/udivsi3.c",
+  "!builtins/umodsi3.c",
+]
+
+# ── The machine half ────────────────────────────────────────────
+#
+# ⚠️⚠️ ONE LIST FOR ALL SEVEN, AND IT IS THE v6-M ONE — THE INTERSECTION, NOT
+# THE UNION.
+#
+# Upstream's CMake picks per CPU, and the sets are nested rather than equal:
+# 25 files on armv6-m, 54 on armv7-m, 72 on armv7e-m, 90 on armv8-m.main. The
+# extra ones are Thumb-2 and VFP assembly, and assembling them on a smaller core
+# fails outright:
+#
+#     umodsi3.S:35: error: conditional execution not supported in Thumb1
+#     save_vfp_d8_d15_regs.S:29: error: instruction requires: fp registers
+#
+# ⭐ So the list is the SMALLEST profile's, and the routines it leaves out are
+# supplied by the generic C in `builtins/*.c` — those files are optimisations,
+# not the only implementation. Measured: every file below assembles on
+# thumbv7m as well as on thumbv6m, which is what makes one list correct rather
+# than merely convenient.
+#
+# ⚠️ AND THAT IS A COST, STATED: a Cortex-M33 gets the portable division routine
+# rather than its own. A package that wants the per-CPU set can add a `cfg`
+# block; this one prefers seven profiles that all work to four that are faster.
+#
+# ⚠️ ONE BLOCK PER ARCH SPELLING, because `cfg(arch = ...)` compares exactly and
+# there is no glob.
+[target.'cfg(arch = "thumbv6m")'.build]
+sources = [
+           "builtins/arm/addsf3.S",
+           "builtins/arm/aeabi_cdcmpeq_check_nan.c",
+           "builtins/arm/aeabi_cdcmp.S",
+           "builtins/arm/aeabi_cfcmpeq_check_nan.c",
+           "builtins/arm/aeabi_cfcmp.S",
+           "builtins/arm/aeabi_dcmp.S",
+           "builtins/arm/aeabi_div0.c",
+           "builtins/arm/aeabi_drsub.c",
+           "builtins/arm/aeabi_fcmp.S",
+           "builtins/arm/aeabi_frsub.c",
+           "builtins/arm/aeabi_idivmod.S",
+           "builtins/arm/aeabi_ldivmod.S",
+           "builtins/arm/aeabi_memcmp.S",
+           "builtins/arm/aeabi_memcpy.S",
+           "builtins/arm/aeabi_memmove.S",
+           "builtins/arm/aeabi_memset.S",
+           "builtins/arm/aeabi_uidivmod.S",
+           "builtins/arm/aeabi_uldivmod.S",
+           "builtins/arm/comparesf2.S",
+           "builtins/arm/divsi3.S",
+           "builtins/arm/fnan2.c",
+           "builtins/arm/fnorm2.c",
+           "builtins/arm/funder.c",
+           "builtins/arm/thumb1/mulsf3.S",
+           "builtins/arm/udivsi3.S"]
+
+[target.'cfg(arch = "thumbv7m")'.build]
+sources = [
+           "builtins/arm/addsf3.S",
+           "builtins/arm/aeabi_cdcmpeq_check_nan.c",
+           "builtins/arm/aeabi_cdcmp.S",
+           "builtins/arm/aeabi_cfcmpeq_check_nan.c",
+           "builtins/arm/aeabi_cfcmp.S",
+           "builtins/arm/aeabi_dcmp.S",
+           "builtins/arm/aeabi_div0.c",
+           "builtins/arm/aeabi_drsub.c",
+           "builtins/arm/aeabi_fcmp.S",
+           "builtins/arm/aeabi_frsub.c",
+           "builtins/arm/aeabi_idivmod.S",
+           "builtins/arm/aeabi_ldivmod.S",
+           "builtins/arm/aeabi_memcmp.S",
+           "builtins/arm/aeabi_memcpy.S",
+           "builtins/arm/aeabi_memmove.S",
+           "builtins/arm/aeabi_memset.S",
+           "builtins/arm/aeabi_uidivmod.S",
+           "builtins/arm/aeabi_uldivmod.S",
+           "builtins/arm/comparesf2.S",
+           "builtins/arm/divsi3.S",
+           "builtins/arm/fnan2.c",
+           "builtins/arm/fnorm2.c",
+           "builtins/arm/funder.c",
+           "builtins/arm/thumb1/mulsf3.S",
+           "builtins/arm/udivsi3.S"]
+
+[target.'cfg(arch = "thumbv7em")'.build]
+sources = [
+           "builtins/arm/addsf3.S",
+           "builtins/arm/aeabi_cdcmpeq_check_nan.c",
+           "builtins/arm/aeabi_cdcmp.S",
+           "builtins/arm/aeabi_cfcmpeq_check_nan.c",
+           "builtins/arm/aeabi_cfcmp.S",
+           "builtins/arm/aeabi_dcmp.S",
+           "builtins/arm/aeabi_div0.c",
+           "builtins/arm/aeabi_drsub.c",
+           "builtins/arm/aeabi_fcmp.S",
+           "builtins/arm/aeabi_frsub.c",
+           "builtins/arm/aeabi_idivmod.S",
+           "builtins/arm/aeabi_ldivmod.S",
+           "builtins/arm/aeabi_memcmp.S",
+           "builtins/arm/aeabi_memcpy.S",
+           "builtins/arm/aeabi_memmove.S",
+           "builtins/arm/aeabi_memset.S",
+           "builtins/arm/aeabi_uidivmod.S",
+           "builtins/arm/aeabi_uldivmod.S",
+           "builtins/arm/comparesf2.S",
+           "builtins/arm/divsi3.S",
+           "builtins/arm/fnan2.c",
+           "builtins/arm/fnorm2.c",
+           "builtins/arm/funder.c",
+           "builtins/arm/thumb1/mulsf3.S",
+           "builtins/arm/udivsi3.S"]
+
+[target.'cfg(arch = "thumbv8m.base")'.build]
+sources = [
+           "builtins/arm/addsf3.S",
+           "builtins/arm/aeabi_cdcmpeq_check_nan.c",
+           "builtins/arm/aeabi_cdcmp.S",
+           "builtins/arm/aeabi_cfcmpeq_check_nan.c",
+           "builtins/arm/aeabi_cfcmp.S",
+           "builtins/arm/aeabi_dcmp.S",
+           "builtins/arm/aeabi_div0.c",
+           "builtins/arm/aeabi_drsub.c",
+           "builtins/arm/aeabi_fcmp.S",
+           "builtins/arm/aeabi_frsub.c",
+           "builtins/arm/aeabi_idivmod.S",
+           "builtins/arm/aeabi_ldivmod.S",
+           "builtins/arm/aeabi_memcmp.S",
+           "builtins/arm/aeabi_memcpy.S",
+           "builtins/arm/aeabi_memmove.S",
+           "builtins/arm/aeabi_memset.S",
+           "builtins/arm/aeabi_uidivmod.S",
+           "builtins/arm/aeabi_uldivmod.S",
+           "builtins/arm/comparesf2.S",
+           "builtins/arm/divsi3.S",
+           "builtins/arm/fnan2.c",
+           "builtins/arm/fnorm2.c",
+           "builtins/arm/funder.c",
+           "builtins/arm/thumb1/mulsf3.S",
+           "builtins/arm/udivsi3.S"]
+
+[target.'cfg(arch = "thumbv8m.main")'.build]
+sources = [
+           "builtins/arm/addsf3.S",
+           "builtins/arm/aeabi_cdcmpeq_check_nan.c",
+           "builtins/arm/aeabi_cdcmp.S",
+           "builtins/arm/aeabi_cfcmpeq_check_nan.c",
+           "builtins/arm/aeabi_cfcmp.S",
+           "builtins/arm/aeabi_dcmp.S",
+           "builtins/arm/aeabi_div0.c",
+           "builtins/arm/aeabi_drsub.c",
+           "builtins/arm/aeabi_fcmp.S",
+           "builtins/arm/aeabi_frsub.c",
+           "builtins/arm/aeabi_idivmod.S",
+           "builtins/arm/aeabi_ldivmod.S",
+           "builtins/arm/aeabi_memcmp.S",
+           "builtins/arm/aeabi_memcpy.S",
+           "builtins/arm/aeabi_memmove.S",
+           "builtins/arm/aeabi_memset.S",
+           "builtins/arm/aeabi_uidivmod.S",
+           "builtins/arm/aeabi_uldivmod.S",
+           "builtins/arm/comparesf2.S",
+           "builtins/arm/divsi3.S",
+           "builtins/arm/fnan2.c",
+           "builtins/arm/fnorm2.c",
+           "builtins/arm/funder.c",
+           "builtins/arm/thumb1/mulsf3.S",
+           "builtins/arm/udivsi3.S"]
+
+[targets.compiler-rt-builtins]
+kind = "lib"
