@@ -5,12 +5,15 @@ helpers — **compiled with the consuming program's own flags**.
 
 ```toml
 [dependencies]
-compiler-rt-builtins = "22.1.8"
+llvm.compiler-rt-builtins = "22.1.8"
 ```
 
 mcpp reports `compiler-runtime compiler-rt (compiler-rt-builtins@22.1.8, graph)`.
+The version is upstream's: every file under `builtins/` is byte-identical to
+`compiler-rt/lib/builtins` at `llvmorg-22.1.8`, and a packaging-only change
+would be `22.1.8.1`.
 
-## ⭐ Why it is a separate package from the C library
+## Why it is a separate package from the C library
 
 picolibc's `printf` formats floats through ryu, which calls routines no C
 library defines — and on rv64 a 128-bit shift the instruction set has no
@@ -18,7 +21,7 @@ instruction for. A C library carrying its own copy would be wrong for anyone
 supplying their own builtins. The dependency edge says the same thing and can be
 overridden.
 
-## ⚠️ compiler-rt does not recognise a `thumb*` triple
+## compiler-rt does not recognise a `thumb*` triple
 
 Configuring upstream's CMake with `thumbv6m-none-eabi` produces a build tree
 with **no builtins target at all**: cmake succeeds, ninja reports "no work to
@@ -28,7 +31,7 @@ do", and the failure surfaces much later as a missing file. Only
 A source package has neither problem: there is no archive to name and no triple
 to translate.
 
-## ⚠️ One list for all seven profiles, and it is the smallest one
+## One list for all seven profiles, and it is the smallest one
 
 Upstream picks per CPU, and the sets are nested rather than equal — 25 files on
 armv6-m, 54 on armv7-m, 72 on armv7e-m, 90 on armv8-m.main. The extra ones are
@@ -44,7 +47,7 @@ by the generic C — those assembly files are optimisations, not the only
 implementation. Measured: every file in the list assembles on `thumbv7m` as well
 as on `thumbv6m`.
 
-⚠️ That is a cost, stated: a Cortex-M33 gets the portable division routine rather
+That is a cost, stated: a Cortex-M33 gets the portable division routine rather
 than its own. Seven profiles that all work was preferred to four that are faster.
 
 ## Licence

@@ -6,7 +6,7 @@ on:
   pull_request:
   workflow_dispatch:
 
-# ⚠️ SEVEN ROWS, NOT ONE. "Cortex-M" is not an instruction set: an object built
+# SEVEN ROWS, NOT ONE. "Cortex-M" is not an instruction set: an object built
 # for `thumbv7em` uses instructions a Cortex-M0 does not have, and the failures
 # this package can have are per-profile — Thumb-2 assembly on a Thumb-1 core,
 # VFP assembly on a core with no FPU. A job that built one row would be green
@@ -59,5 +59,5 @@ jobs:
             echo "  ok  $t"
             n=$((n+1))
           done
-          # ⚠️ A count, because a loop that ran zero times also reaches this line.
+          # A count, because a loop that ran zero times also reaches this line.
           [ "$n" = "7" ] || { echo "::error::built $n rows, expected 7"; exit 1; }

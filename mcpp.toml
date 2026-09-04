@@ -1,6 +1,6 @@
 # The compiler-rt builtins as a SOURCE package.
 #
-# ⭐⭐ TWO PACKAGES RATHER THAN ONE, AND THE EDGE IS THE REASON.
+# TWO PACKAGES RATHER THAN ONE, AND THE EDGE IS THE REASON.
 #
 # picolibc's  formats floats through ryu, which calls routines the
 # compiler emits references to and no C library defines — and on rv64 a 128-bit
@@ -8,7 +8,7 @@
 # own copy would be wrong for anyone supplying their own builtins; a dependency
 # edge says the same thing and can be overridden.
 #
-# ⭐ AND IT IS A SOURCE PACKAGE FOR THE SAME REASON picolibc IS. Built with the
+# AND IT IS A SOURCE PACKAGE FOR THE SAME REASON picolibc IS. Built with the
 # consuming program's own , so the builtins a program links are
 # by construction the ones its own compiler would have emitted calls to. A
 # prebuilt would have to ship one archive per ABI, under a name the consumer
@@ -16,7 +16,7 @@
 # it refuses a  triple outright, producing a build tree with no builtins
 # target at all while cmake reports success.
 #
-# ⚠️ THE SOURCE LIST IS UPSTREAM'S CMAKE SELECTION, READ OUT OF A REAL BUILD.
+# THE SOURCE LIST IS UPSTREAM'S CMAKE SELECTION, READ OUT OF A REAL BUILD.
 # The exclusions are its complement for ARM:
 #
 #   *tf*, *xf*, *bf*     128-bit, 80-bit and bfloat, which ARM has none of
@@ -24,13 +24,13 @@
 #   crtbegin/crtend      the C runtime's, not the builtins'
 #   divsi3, clzsi2, …    superseded by the machine directory below
 #
-# ⚠️⚠️ AND THE COMPLEMENT MUST BE TAKEN AGAINST THE SAME PROFILE THE MACHINE LIST
+# AND THE COMPLEMENT MUST BE TAKEN AGAINST THE SAME PROFILE THE MACHINE LIST
 # COMES FROM. The machine half below is armv6-m's, so these exclusions are
 # armv6-m's too. Computing them from armv7-m — which does not use
 # `arm/addsf3.S` — left the generic `addsf3.c` in, and the link failed with
 # `duplicate symbol: __aeabi_fadd`. Two lists, one profile.
 #
-# ⚠️ AND THE VFP ASSEMBLY IS EXCLUDED ON EVERY ROW, DELIBERATELY. Upstream's
+# AND THE VFP ASSEMBLY IS EXCLUDED ON EVERY ROW, DELIBERATELY. Upstream's
 # CMake adds  only where the target has an FPU — measured, 0 files
 # on armv6-m, 16 on armv7e-m, 34 on armv8-m.main — which would make the source
 # list depend on the float ABI as well as the architecture. Those files are
@@ -38,24 +38,42 @@
 # correct on every profile, so one list serves all seven and the selection
 # problem disappears.
 [package]
-# ⚠️ THE NAMESPACE IS UPSTREAM'S, NOT OURS. These are LLVM's builtins with a
+# THE NAMESPACE IS UPSTREAM'S, NOT OURS. These are LLVM's builtins with a
 # manifest added; the code is LLVM's and the identity says so. `mcpplibs` is for
 # packages whose content this organisation wrote. The wrapper REPOSITORY can
 # still live under mcpplibs, as `ocornut.imgui` does.
 namespace   = "llvm"
 name        = "compiler-rt-builtins"
-# ⚠️ THE PACKAGE'S OWN VERSION, NOT UPSTREAM'S. The first release took
-# `22.1.8` — the version of the sources it vendors — and that is wrong in kind:
-# a package's version has to move when the PACKAGING changes, and the packaging
-# is most of what is here. `openkal-musl` is 0.13.1 for musl 1.2.5 for the same
-# reason. Upstream's version is in the description, where it describes.
-version     = "0.1.1"
-description = "The compiler-rt 22.1.8 builtins as a source package: the routines a compiler emits calls to, compiled with the consuming program's own flags"
+# AND THE VERSION IS UPSTREAM'S TOO, FOR THE REASON THE NAMESPACE IS.
+#
+# An intermediate release numbered this package independently (0.1.x) on the
+# argument that a version must move when the PACKAGING changes and upstream's
+# has not. The fourth segment answers that argument without a second numbering
+# scheme: a packaging-only release is `22.1.8.1`, which orders strictly above
+# `22.1.8` because mcpp compares an arbitrary-length dot list with absent
+# segments as zero, and which satisfies every requirement `22.1.8` satisfies
+# because a bare requirement is a caret. The number a consumer writes is
+# therefore the number upstream released.
+#
+# The number also carries information no independent one could. These routines
+# are an ABI contract with a COMPILER, and "the builtins that ship with the
+# clang in this toolchain" is the question a consumer is actually asking.
+# `22.1.8` answers it; `0.1.1` does not.
+#
+# Verified against upstream, not asserted: every one of the 347 files under
+# `builtins/` is byte-identical to `compiler-rt/lib/builtins` at the tag
+# `llvmorg-22.1.8` of https://github.com/llvm/llvm-project.
+version     = "22.1.8"
+description = "The compiler-rt builtins as a source package: LLVM's replacement for libgcc — the routines a compiler emits calls to — compiled with the consuming program's own flags"
+# The effective grant, which is what an SBOM consumer needs. 342 of the 347
+# vendored files carry this identifier in an SPDX header; `LICENSE.compiler-rt`
+# additionally retains the historical notice under which the compiler_rt library
+# was dual-licensed NCSA/MIT, and that text is shipped unmodified.
 license     = "Apache-2.0 WITH LLVM-exception"
-authors     = ["mcpplibs"]
+authors     = ["LLVM contributors", "mcpplibs (packaging)"]
 repo        = "https://github.com/mcpplibs/compiler-rt-builtins"
 
-# ⭐ THE LAYER NAME IS THE ENGINE'S, NOT THIS PACKAGE'S. mcpp resolves five
+# THE LAYER NAME IS THE ENGINE'S, NOT THIS PACKAGE'S. mcpp resolves five
 # target-side layers and this is one of them — "the compiler's own runtime
 # (builtins, unwinder)". Inventing `mcpp:compiler-builtins` was refused by name,
 # which is the behaviour that keeps the `mcpp:` prefix meaning one thing.
@@ -68,7 +86,7 @@ include_dirs = ["builtins"]
 sources = [
   "builtins/*.c",
 
-  # ⚠️ NO MACHINE EXCLUSIONS HERE, AND THEY WOULD BE WORSE THAN REDUNDANT.
+  # NO MACHINE EXCLUSIONS HERE, AND THEY WOULD BE WORSE THAN REDUNDANT.
   # `builtins/*.c` is not recursive, so no machine directory is matched in the
   # first place — and a negative glob in the base set is applied to the MERGED
   # set, so `!builtins/arm/**` would cancel the per-target block that adds them
@@ -144,7 +162,7 @@ sources = [
 
 # ── The machine half ────────────────────────────────────────────
 #
-# ⚠️⚠️ ONE LIST FOR ALL SEVEN, AND IT IS THE v6-M ONE — THE INTERSECTION, NOT
+# ONE LIST FOR ALL SEVEN, AND IT IS THE v6-M ONE — THE INTERSECTION, NOT
 # THE UNION.
 #
 # Upstream's CMake picks per CPU, and the sets are nested rather than equal:
@@ -155,17 +173,17 @@ sources = [
 #     umodsi3.S:35: error: conditional execution not supported in Thumb1
 #     save_vfp_d8_d15_regs.S:29: error: instruction requires: fp registers
 #
-# ⭐ So the list is the SMALLEST profile's, and the routines it leaves out are
+# So the list is the SMALLEST profile's, and the routines it leaves out are
 # supplied by the generic C in `builtins/*.c` — those files are optimisations,
 # not the only implementation. Measured: every file below assembles on
 # thumbv7m as well as on thumbv6m, which is what makes one list correct rather
 # than merely convenient.
 #
-# ⚠️ AND THAT IS A COST, STATED: a Cortex-M33 gets the portable division routine
+# AND THAT IS A COST, STATED: a Cortex-M33 gets the portable division routine
 # rather than its own. A package that wants the per-CPU set can add a `cfg`
 # block; this one prefers seven profiles that all work to four that are faster.
 #
-# ⚠️ ONE BLOCK PER ARCH SPELLING, because `cfg(arch = ...)` compares exactly and
+# ONE BLOCK PER ARCH SPELLING, because `cfg(arch = ...)` compares exactly and
 # there is no glob.
 [target.'cfg(arch = "thumbv6m")'.build]
 sources = [
