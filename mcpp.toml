@@ -70,7 +70,7 @@ name        = "compiler-rt-builtins"
 # never come to mean something else, so the packaging revision is what moves.
 # A consumer still writes `22.1.8`: a bare requirement is a caret, and `22.1.8.1`
 # satisfies it.
-version     = "22.1.8.1"
+version     = "22.1.8.2"
 description = "The compiler-rt builtins as a source package: LLVM's replacement for libgcc — the routines a compiler emits calls to — compiled with the consuming program's own flags"
 # The effective grant, which is what an SBOM consumer needs. 342 of the 347
 # vendored files carry this identifier in an SPDX header; `LICENSE.compiler-rt`
@@ -87,8 +87,12 @@ repo        = "https://github.com/mcpplibs/compiler-rt-builtins"
 provides    = ["mcpp:compiler-runtime=compiler-rt"]
 
 [build]
-language     = "c11"
-import_std   = false
+# THE KEY IS `c_standard`, AND THE TWO IT REPLACES WERE SILENTLY IGNORED.
+# `language` and `import_std` are not part of `[build]`; mcpp reported both as
+# unsupported and carried on, so this package compiled at whatever the default
+# C standard was rather than the one it asked for. `import_std` has no
+# equivalent and needs none: nothing here is C++.
+c_standard   = "c11"
 include_dirs = ["builtins"]
 sources = [
   "builtins/*.c",
