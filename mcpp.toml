@@ -49,7 +49,7 @@ name        = "compiler-rt-builtins"
 # a package's version has to move when the PACKAGING changes, and the packaging
 # is most of what is here. `openkal-musl` is 0.13.1 for musl 1.2.5 for the same
 # reason. Upstream's version is in the description, where it describes.
-version     = "0.1.0"
+version     = "0.1.1"
 description = "The compiler-rt 22.1.8 builtins as a source package: the routines a compiler emits calls to, compiled with the consuming program's own flags"
 license     = "Apache-2.0 WITH LLVM-exception"
 authors     = ["mcpplibs"]
