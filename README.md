@@ -5,13 +5,15 @@ helpers — **compiled with the consuming program's own flags**.
 
 ```toml
 [dependencies]
-llvm.compiler-rt-builtins = "22.1.8"
+llvm.compiler-rt-builtins = "22.1.8.2"
 ```
 
-mcpp reports `compiler-runtime compiler-rt (compiler-rt-builtins@22.1.8, graph)`.
+mcpp reports `compiler-runtime compiler-rt (compiler-rt-builtins@22.1.8.2, graph)`.
+
 The version is upstream's: every file under `builtins/` is byte-identical to
-`compiler-rt/lib/builtins` at `llvmorg-22.1.8`, and a packaging-only change
-would be `22.1.8.1`.
+`compiler-rt/lib/builtins` at `llvmorg-22.1.8`. The fourth segment is the
+packaging revision, and it has to be written out, because a bare requirement in
+mcpp is an exact pin rather than a caret.
 
 ## Why it is a separate package from the C library
 

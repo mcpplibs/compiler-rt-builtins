@@ -51,9 +51,15 @@ name        = "compiler-rt-builtins"
 # has not. The fourth segment answers that argument without a second numbering
 # scheme: a packaging-only release is `22.1.8.1`, which orders strictly above
 # `22.1.8` because mcpp compares an arbitrary-length dot list with absent
-# segments as zero, and which satisfies every requirement `22.1.8` satisfies
-# because a bare requirement is a caret. The number a consumer writes is
-# therefore the number upstream released.
+# segments as zero.
+#
+# A CONSUMER WRITES THE EXACT VERSION, BECAUSE A BARE REQUIREMENT IN mcpp IS AN
+# EXACT PIN AND NOT A CARET. `mcpp::pm::is_version_constraint` returns false for
+# a bare number, so no resolution runs and the literal is used as the address.
+# Measured: with only `22.1.8.2` in the index, a dependency written `"22.1.8"`
+# reported `Downloading v22.1.8` and then `install path missing after fetch`. A
+# packaging revision therefore costs a re-pin in every consumer, which is what
+# every other version bump costs here.
 #
 # The number also carries information no independent one could. These routines
 # are an ABI contract with a COMPILER, and "the builtins that ship with the
@@ -68,8 +74,7 @@ name        = "compiler-rt-builtins"
 # THAN AN EXCEPTION TO IT. An earlier tag named `22.1.8` was published, and
 # mirrored, carrying different bytes. A version that has been published must
 # never come to mean something else, so the packaging revision is what moves.
-# A consumer still writes `22.1.8`: a bare requirement is a caret, and `22.1.8.1`
-# satisfies it.
+# A consumer writes `22.1.8.2` in full: a bare requirement in mcpp is an exact pin.
 version     = "22.1.8.2"
 description = "The compiler-rt builtins as a source package: LLVM's replacement for libgcc — the routines a compiler emits calls to — compiled with the consuming program's own flags"
 # The effective grant, which is what an SBOM consumer needs. 342 of the 347
