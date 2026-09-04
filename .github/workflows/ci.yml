@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# ⚠️ SEVEN ROWS, NOT ONE. "Cortex-M" is not an instruction set: an object built
+# for `thumbv7em` uses instructions a Cortex-M0 does not have, and the failures
+# this package can have are per-profile — Thumb-2 assembly on a Thumb-1 core,
+# VFP assembly on a core with no FPU. A job that built one row would be green
+# while six were broken.
+jobs:
+  build:
+    name: builds for every M-profile row
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      # The release carrying the Cortex-M target rows and the tool tiers.
+      MCPP_VERSION: 2026.9.4.2
+      XLINGS_VERSION: v2026.8.17.2
+      XLINGS_NON_INTERACTIVE: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install xlings
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/openxlings/xlings/main/tools/other/quick_install.sh \
+            | bash -s "$XLINGS_VERSION"
+          echo "$HOME/.xlings/subos/current/bin" >> "$GITHUB_PATH"
+
+      - name: Install mcpp
+        run: |
+          # A loop, because one `xlings update` can return a stale index without
+          # saying so: the pointer propagates asynchronously after a bump merges.
+          for attempt in 1 2 3 4 5 6; do
+            xlings update > /dev/null 2>&1 || true
+            if xlings install "mcpp@$MCPP_VERSION" -y -g; then break; fi
+            if [ "$attempt" = 6 ]; then
+              echo "::error::mcpp@$MCPP_VERSION never appeared in the index"
+              exit 1
+            fi
+            sleep 60
+          done
+          mcpp --version
+          mcpp self config --mirror GLOBAL
+
+      - name: Every M-profile row builds
+        run: |
+          set -euo pipefail
+          n=0
+          for t in thumbv6m-none-eabi thumbv7m-none-eabi thumbv7em-none-eabi \
+                   thumbv7em-none-eabihf thumbv8m.base-none-eabi \
+                   thumbv8m.main-none-eabi thumbv8m.main-none-eabihf; do
+            rm -rf target
+            mcpp build --target "$t" > /dev/null 2>&1 || true
+            mcpp build --target "$t" || { echo "::error::$t does not build"; exit 1; }
+            echo "  ok  $t"
+            n=$((n+1))
+          done
+          # ⚠️ A count, because a loop that ran zero times also reaches this line.
+          [ "$n" = "7" ] || { echo "::error::built $n rows, expected 7"; exit 1; }

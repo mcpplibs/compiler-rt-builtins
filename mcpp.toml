@@ -24,6 +24,12 @@
 #   crtbegin/crtend      the C runtime's, not the builtins'
 #   divsi3, clzsi2, …    superseded by the machine directory below
 #
+# ⚠️⚠️ AND THE COMPLEMENT MUST BE TAKEN AGAINST THE SAME PROFILE THE MACHINE LIST
+# COMES FROM. The machine half below is armv6-m's, so these exclusions are
+# armv6-m's too. Computing them from armv7-m — which does not use
+# `arm/addsf3.S` — left the generic `addsf3.c` in, and the link failed with
+# `duplicate symbol: __aeabi_fadd`. Two lists, one profile.
+#
 # ⚠️ AND THE VFP ASSEMBLY IS EXCLUDED ON EVERY ROW, DELIBERATELY. Upstream's
 # CMake adds  only where the target has an FPU — measured, 0 files
 # on armv6-m, 16 on armv7e-m, 34 on armv8-m.main — which would make the source
@@ -61,6 +67,7 @@ sources = [
   # thumbv7m-none-eabi` compiled 770 objects and not one from `builtins/arm`,
   # and the link failed on `__aeabi_uldivmod`.
 
+  "!builtins/addsf3.c",
   "!builtins/addtf3.c",
   "!builtins/atomic.c",
   "!builtins/atomic_flag_clear.c",
@@ -69,15 +76,10 @@ sources = [
   "!builtins/atomic_flag_test_and_set_explicit.c",
   "!builtins/atomic_signal_fence.c",
   "!builtins/atomic_thread_fence.c",
-  "!builtins/bswapdi2.c",
-  "!builtins/bswapsi2.c",
-  "!builtins/clzdi2.c",
-  "!builtins/clzsi2.c",
   "!builtins/comparesf2.c",
   "!builtins/comparetf2.c",
   "!builtins/crtbegin.c",
   "!builtins/crtend.c",
-  "!builtins/divmodsi4.c",
   "!builtins/divsi3.c",
   "!builtins/divtc3.c",
   "!builtins/divtf3.c",
@@ -112,8 +114,7 @@ sources = [
   "!builtins/floatunsitf.c",
   "!builtins/floatuntitf.c",
   "!builtins/floatuntixf.c",
-  "!builtins/fp_mode.c",
-  "!builtins/modsi3.c",
+  "!builtins/mulsf3.c",
   "!builtins/multc3.c",
   "!builtins/multf3.c",
   "!builtins/mulxc3.c",
@@ -129,9 +130,7 @@ sources = [
   "!builtins/trunctfxf2.c",
   "!builtins/truncxfbf2.c",
   "!builtins/truncxfhf2.c",
-  "!builtins/udivmodsi4.c",
   "!builtins/udivsi3.c",
-  "!builtins/umodsi3.c",
 ]
 
 # ── The machine half ────────────────────────────────────────────
