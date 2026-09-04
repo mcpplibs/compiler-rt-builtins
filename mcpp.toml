@@ -38,7 +38,11 @@
 # correct on every profile, so one list serves all seven and the selection
 # problem disappears.
 [package]
-namespace   = "mcpplibs"
+# ⚠️ THE NAMESPACE IS UPSTREAM'S, NOT OURS. These are LLVM's builtins with a
+# manifest added; the code is LLVM's and the identity says so. `mcpplibs` is for
+# packages whose content this organisation wrote. The wrapper REPOSITORY can
+# still live under mcpplibs, as `ocornut.imgui` does.
+namespace   = "llvm"
 name        = "compiler-rt-builtins"
 # ⚠️ THE PACKAGE'S OWN VERSION, NOT UPSTREAM'S. The first release took
 # `22.1.8` — the version of the sources it vendors — and that is wrong in kind:
