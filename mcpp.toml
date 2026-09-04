@@ -63,7 +63,14 @@ name        = "compiler-rt-builtins"
 # Verified against upstream, not asserted: every one of the 347 files under
 # `builtins/` is byte-identical to `compiler-rt/lib/builtins` at the tag
 # `llvmorg-22.1.8` of https://github.com/llvm/llvm-project.
-version     = "22.1.8"
+#
+# THIS RELEASE IS `22.1.8.1` AND NOT `22.1.8`, WHICH IS THE SCHEME IN USE RATHER
+# THAN AN EXCEPTION TO IT. An earlier tag named `22.1.8` was published, and
+# mirrored, carrying different bytes. A version that has been published must
+# never come to mean something else, so the packaging revision is what moves.
+# A consumer still writes `22.1.8`: a bare requirement is a caret, and `22.1.8.1`
+# satisfies it.
+version     = "22.1.8.1"
 description = "The compiler-rt builtins as a source package: LLVM's replacement for libgcc — the routines a compiler emits calls to — compiled with the consuming program's own flags"
 # The effective grant, which is what an SBOM consumer needs. 342 of the 347
 # vendored files carry this identifier in an SPDX header; `LICENSE.compiler-rt`
