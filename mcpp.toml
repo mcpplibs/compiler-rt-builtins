@@ -75,7 +75,7 @@ name        = "compiler-rt-builtins"
 # mirrored, carrying different bytes. A version that has been published must
 # never come to mean something else, so the packaging revision is what moves.
 # A consumer writes `22.1.8.2` in full: a bare requirement in mcpp is an exact pin.
-version     = "22.1.8.4"
+version     = "22.1.8.5"
 description = "The compiler-rt builtins as a source package: LLVM's replacement for libgcc — the routines a compiler emits calls to — compiled with the consuming program's own flags"
 # The effective grant, which is what an SBOM consumer needs. 342 of the 347
 # vendored files carry this identifier in an SPDX header; `LICENSE.compiler-rt`
@@ -412,12 +412,23 @@ sources = [
   "builtins/atomic_thread_fence.c",
 ]
 
+# THE x86_64 UNITS REPLACE THEIR GENERIC COUNTERPARTS, they do not join them.
+# Upstream's x86_64 list carries these four in place of the generic C files,
+# which define the same symbols; both in one archive is what ld64 reported on
+# the x86_64 simulator row as four `duplicate symbol` errors (`__floatdidf`
+# from `builtins/floatdidf.o` and from `builtins/x86_64/floatdidf.o`).
+# The CI job now reads the archive for a symbol defined twice, since a build
+# cannot see a duplicate that only a link resolves.
 [target.'cfg(all(os = "ios", arch = "x86_64"))'.build]
 sources = [
   "builtins/x86_64/floatdidf.c",
   "builtins/x86_64/floatdisf.c",
   "builtins/x86_64/floatundidf.S",
   "builtins/x86_64/floatundisf.S",
+  "!builtins/floatdidf.c",
+  "!builtins/floatdisf.c",
+  "!builtins/floatundidf.c",
+  "!builtins/floatundisf.c",
 ]
 
 [targets.compiler-rt-builtins]
