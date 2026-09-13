@@ -122,6 +122,10 @@ jobs:
               grep -q " T $sym\$" <<<"$symbols" \
                 || { echo "::error::$t archive lacks $sym"; grep -iE "platform|sf3|si3|sf2" <<<"$symbols" || true; exit 1; }
             done
+            # AND NO SYMBOL DEFINED TWICE: a unit that replaces a generic one
+            # must displace it, or a consumer's link reports a duplicate.
+            dups=$(grep ' T ' <<<"$symbols" | awk '{print $NF}' | sort | uniq -d)
+            [ -z "$dups" ] || { echo "::error::$t archive defines a symbol twice:"; echo "$dups"; exit 1; }
             echo "  ok  $t"
             n=$((n+1))
           done
