@@ -66,6 +66,10 @@ jobs:
     name: builds for the iOS simulator rows
     runs-on: macos-15
     timeout-minutes: 40
+    env:
+      MCPP_VERSION: 2026.9.13.1
+      XLINGS_VERSION: v2026.9.12.1
+      XLINGS_NON_INTERACTIVE: '1'
     defaults:
       run:
         shell: bash
