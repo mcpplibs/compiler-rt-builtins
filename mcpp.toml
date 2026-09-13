@@ -75,7 +75,7 @@ name        = "compiler-rt-builtins"
 # mirrored, carrying different bytes. A version that has been published must
 # never come to mean something else, so the packaging revision is what moves.
 # A consumer writes `22.1.8.2` in full: a bare requirement in mcpp is an exact pin.
-version     = "22.1.8.3"
+version     = "22.1.8.4"
 description = "The compiler-rt builtins as a source package: LLVM's replacement for libgcc — the routines a compiler emits calls to — compiled with the consuming program's own flags"
 # The effective grant, which is what an SBOM consumer needs. 342 of the 347
 # vendored files carry this identifier in an SPDX header; `LICENSE.compiler-rt`
@@ -364,10 +364,25 @@ sources = [
 # no outline-atomics helper is ever called, and the SME and PAC units serve
 # configurations these rows do not select.
 #
+# AND THE FIVE GENERIC ROUTINES THE M-PROFILE ROWS SUPERSEDE WITH ASSEMBLY.
+# The package-wide list withholds `addsf3`, `comparesf2`, `divsi3`, `mulsf3`
+# and `udivsi3` because `builtins/arm/` supplies them on Cortex-M; on an Apple
+# row nothing does, and the package's own objects call them (`subsf3` calls
+# `__addsf3`, `modsi3` calls `__divsi3`, `udivmodsi4` calls `__udivsi3`).
+# Measured on macos-15 as three `ld64.lld: error: undefined symbol` lines in
+# a consumer's link, each referenced from this package's own object. The
+# archive check in CI reads the five symbols back so that a build, which does
+# not link, cannot hide the omission again.
+#
 # The macOS row is not listed: its payload carries `libclang_rt.osx.a` and the
 # driver links it.
 [target.'cfg(os = "ios")'.build]
 sources = [
+  "builtins/addsf3.c",
+  "builtins/comparesf2.c",
+  "builtins/divsi3.c",
+  "builtins/mulsf3.c",
+  "builtins/udivsi3.c",
   "builtins/atomic_flag_clear.c",
   "builtins/atomic_flag_clear_explicit.c",
   "builtins/atomic_flag_test_and_set.c",
