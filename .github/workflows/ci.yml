@@ -61,3 +61,54 @@ jobs:
           done
           # A count, because a loop that ran zero times also reaches this line.
           [ "$n" = "7" ] || { echo "::error::built $n rows, expected 7"; exit 1; }
+
+  ios:
+    name: builds for the iOS simulator rows
+    runs-on: macos-15
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install xlings
+        run: |
+          curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 \
+            https://raw.githubusercontent.com/openxlings/xlings/main/tools/other/quick_install.sh \
+            | bash -s "$XLINGS_VERSION"
+          echo "$HOME/.xlings/subos/current/bin" >> "$GITHUB_PATH"
+
+      - name: Install mcpp
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            xlings update > /dev/null 2>&1 || true
+            if xlings install "mcpp@$MCPP_VERSION" -y -g; then break; fi
+            if [ "$attempt" = 6 ]; then
+              echo "::error::mcpp@$MCPP_VERSION never appeared in the index"
+              exit 1
+            fi
+            sleep 60
+          done
+          mcpp --version
+          mcpp self config --mirror GLOBAL
+
+      # THE UNIT THAT DEFINES `__isPlatformVersionAtLeast` IS IN THE OBJECTS.
+      # A build that succeeds can leave the routine out (it compiles to nothing
+      # where `__APPLE__` is not defined), so the symbol is read from the
+      # archive rather than assumed from the exit status.
+      - name: Both simulator rows build and define the availability routine
+        run: |
+          set -euo pipefail
+          n=0
+          for t in aarch64-ios-sim x86_64-ios-sim; do
+            rm -rf target
+            mcpp build --target "$t" || { echo "::error::$t does not build"; exit 1; }
+            lib=$(find target/"$t" -name 'libcompiler-rt-builtins.a' | head -1)
+            [ -n "$lib" ] || { echo "::error::$t produced no archive"; exit 1; }
+            nm "$lib" | grep -q ' T ___isPlatformVersionAtLeast' \
+              || { echo "::error::$t archive lacks ___isPlatformVersionAtLeast"; nm "$lib" | grep -i platform || true; exit 1; }
+            echo "  ok  $t"
+            n=$((n+1))
+          done
+          [ "$n" = "2" ] || { echo "::error::built $n rows, expected 2"; exit 1; }
