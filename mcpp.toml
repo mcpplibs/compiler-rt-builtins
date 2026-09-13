@@ -75,7 +75,7 @@ name        = "compiler-rt-builtins"
 # mirrored, carrying different bytes. A version that has been published must
 # never come to mean something else, so the packaging revision is what moves.
 # A consumer writes `22.1.8.2` in full: a bare requirement in mcpp is an exact pin.
-version     = "22.1.8.2"
+version     = "22.1.8.3"
 description = "The compiler-rt builtins as a source package: LLVM's replacement for libgcc — the routines a compiler emits calls to — compiled with the consuming program's own flags"
 # The effective grant, which is what an SBOM consumer needs. 342 of the 347
 # vendored files carry this identifier in an SPDX header; `LICENSE.compiler-rt`
@@ -340,6 +340,49 @@ sources = [
            "builtins/arm/funder.c",
            "builtins/arm/thumb1/mulsf3.S",
            "builtins/arm/udivsi3.S"]
+
+# ── The Apple rows: iOS and the iOS simulator ────────────────────────────────
+#
+# THE PAYLOAD HAS NO COMPILER RUNTIME FOR THESE PLATFORMS, AND THE DRIVER SAYS
+# NOTHING. The official LLVM macOS payload builds `libclang_rt.osx.a` and no
+# `ios` or `iossim` archive (measured on llvm 22.1.8: `lib/clang/22/lib/darwin/`
+# holds the macOS archives alone), and clang's Darwin driver links the archive
+# only when the file exists. A program that reaches an availability check ---
+# `__builtin_available`, or a system header that uses it --- then fails at link
+# with `__isPlatformVersionAtLeast` undefined, and nothing said so earlier
+# (mcpp-community/mcpp#630). That routine is in `os_version_check.c`, which is
+# a Darwin translation unit and compiles to nothing elsewhere.
+#
+# THE SELECTION IS UPSTREAM'S FOR DARWIN, READ OUT OF ITS CMAKE. The generic
+# list is the package-wide one above; Darwin adds the six `atomic_flag_*` and
+# `atomic_*_fence` units that the package-wide list withholds for the M-profile
+# rows, and the x86_64 simulator adds the `x86_64/` directory. `apple_versioning.c`
+# is excluded on iOS by upstream's own `Darwin-excludes/ios.txt` and is not
+# needed on the simulator either. `enable_execute_stack.c` is removed from the
+# arm64 Darwin list by upstream and stays excluded here. Nothing under
+# `aarch64/` is added: an Apple arm64 CPU has the LSE atomics as a baseline, so
+# no outline-atomics helper is ever called, and the SME and PAC units serve
+# configurations these rows do not select.
+#
+# The macOS row is not listed: its payload carries `libclang_rt.osx.a` and the
+# driver links it.
+[target.'cfg(os = "ios")'.build]
+sources = [
+  "builtins/atomic_flag_clear.c",
+  "builtins/atomic_flag_clear_explicit.c",
+  "builtins/atomic_flag_test_and_set.c",
+  "builtins/atomic_flag_test_and_set_explicit.c",
+  "builtins/atomic_signal_fence.c",
+  "builtins/atomic_thread_fence.c",
+]
+
+[target.'cfg(all(os = "ios", arch = "x86_64"))'.build]
+sources = [
+  "builtins/x86_64/floatdidf.c",
+  "builtins/x86_64/floatdisf.c",
+  "builtins/x86_64/floatundidf.S",
+  "builtins/x86_64/floatundisf.S",
+]
 
 [targets.compiler-rt-builtins]
 kind = "lib"
