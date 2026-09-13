@@ -110,8 +110,12 @@ jobs:
             mcpp build --target "$t" || { echo "::error::$t does not build"; exit 1; }
             lib=$(find target/"$t" -name 'libcompiler-rt-builtins.a' | head -1)
             [ -n "$lib" ] || { echo "::error::$t produced no archive"; exit 1; }
-            nm "$lib" | grep -q ' T ___isPlatformVersionAtLeast' \
-              || { echo "::error::$t archive lacks ___isPlatformVersionAtLeast"; nm "$lib" | grep -i platform || true; exit 1; }
+            # Read into a variable first: under `pipefail` a `grep -q` that
+            # closes its input early turns nm's SIGPIPE into a failed pipeline,
+            # and the step reports a symbol as missing while printing it.
+            symbols=$(nm "$lib")
+            grep -q ' T ___isPlatformVersionAtLeast' <<<"$symbols" \
+              || { echo "::error::$t archive lacks ___isPlatformVersionAtLeast"; grep -i platform <<<"$symbols" || true; exit 1; }
             echo "  ok  $t"
             n=$((n+1))
           done
