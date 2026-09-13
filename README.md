@@ -63,16 +63,16 @@ The official LLVM macOS payload builds `libclang_rt.osx.a` and no `ios` or
 archive only when the file exists. A program that reaches an availability check
 (`__builtin_available`, or a system header that uses it) then fails at link
 with `__isPlatformVersionAtLeast` undefined, and nothing said so earlier. The
-routine is in `os_version_check.c`, a Darwin translation unit. From 22.1.8.3 this
+routine is in `os_version_check.c`, a Darwin translation unit. From 22.1.8.4 this
 package carries upstream's Darwin selection under `cfg(os = "ios")`, and an
 iOS application declares it beside its C++ standard library package:
 
 ```toml
 [target.'cfg(os = "ios")'.dependencies]
-llvm.compiler-rt-builtins = "22.1.8.3"
+llvm.compiler-rt-builtins = "22.1.8.4"
 llvm.libcxx               = "22.1.8.1"
 ```
 
-mcpp reports `compiler-runtime compiler-rt (compiler-rt-builtins@22.1.8.3, graph)`
+mcpp reports `compiler-runtime compiler-rt (compiler-rt-builtins@22.1.8.4, graph)`
 on those rows, and prints a degradation naming this package when the payload
 has no archive for the platform and the graph declares none.

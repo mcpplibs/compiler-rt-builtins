@@ -114,8 +114,14 @@ jobs:
             # closes its input early turns nm's SIGPIPE into a failed pipeline,
             # and the step reports a symbol as missing while printing it.
             symbols=$(nm "$lib")
-            grep -q ' T ___isPlatformVersionAtLeast' <<<"$symbols" \
-              || { echo "::error::$t archive lacks ___isPlatformVersionAtLeast"; grep -i platform <<<"$symbols" || true; exit 1; }
+            # The availability routine, and the five generic routines the
+            # M-profile rows supersede with assembly (`comparesf2.c` defines `__ltsf2`
+            # and its siblings, not a `__comparesf2`), which this package's own
+            # objects call and which a build (no link) cannot miss on its own.
+            for sym in ___isPlatformVersionAtLeast ___addsf3 ___ltsf2 ___divsi3 ___mulsf3 ___udivsi3; do
+              grep -q " T $sym\$" <<<"$symbols" \
+                || { echo "::error::$t archive lacks $sym"; grep -iE "platform|sf3|si3|sf2" <<<"$symbols" || true; exit 1; }
+            done
             echo "  ok  $t"
             n=$((n+1))
           done
