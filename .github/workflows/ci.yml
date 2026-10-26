@@ -130,3 +130,51 @@ jobs:
             n=$((n+1))
           done
           [ "$n" = "2" ] || { echo "::error::built $n rows, expected 2"; exit 1; }
+
+  # THE OK-IMAGE ROWS (`<arch>-openkal`, openkal SPEC clause 12), with the
+  # mcpp that has the target until it is released. The 128-bit routines are
+  # in the AArch64 archive (a `long double` is 128 bits there) and the 80-bit
+  # complex multiply in the x86_64 one, each read back from the archive.
+  openkal:
+    name: builds for the ok-image rows
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      MCPP_SOURCE_REF: release/2026.10.26.2
+      XLINGS_VERSION: v2026.10.26.1
+      XLINGS_NON_INTERACTIVE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install xlings
+        run: |
+          curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 \
+            https://raw.githubusercontent.com/openxlings/xlings/main/tools/other/quick_install.sh \
+            | bash -s "$XLINGS_VERSION"
+          echo "$HOME/.xlings/subos/current/bin" >> "$GITHUB_PATH"
+      - name: The mcpp that has the target
+        run: |
+          xlings update > /dev/null 2>&1 || true
+          xlings install mcpp -y -g
+          mcpp self config --mirror GLOBAL
+          src="$RUNNER_TEMP/mcpp-src"
+          git clone --quiet --depth 1 --branch "$MCPP_SOURCE_REF" https://github.com/mcpp-community/mcpp.git "$src"
+          rm -f "$src/.xlings.json"
+          ( cd "$src" && mcpp build --release )
+          built=$(find "$src/target" -type f -name mcpp | head -1)
+          [ -n "$built" ] || { echo "::error::mcpp did not build"; exit 1; }
+          echo "$(cd "$(dirname "$built")" && pwd)" >> "$GITHUB_PATH"
+      - name: Both rows build and define their wide routines
+        run: |
+          set -euo pipefail
+          for pair in "x86_64-openkal:__mulxc3" "aarch64-openkal:__multf3"; do
+            t="${pair%%:*}"; sym="${pair#*:}"
+            rm -rf target
+            mcpp build --target "$t" || { echo "::error::$t does not build"; exit 1; }
+            lib=$(find target/"$t" -name 'libcompiler-rt-builtins.a' | head -1)
+            [ -n "$lib" ] || { echo "::error::$t produced no archive"; exit 1; }
+            symbols=$(llvm-nm "$lib" 2>/dev/null || nm "$lib")
+            grep -q " T $sym\$" <<<"$symbols" || { echo "::error::$t archive lacks $sym"; exit 1; }
+            dups=$(grep ' T ' <<<"$symbols" | awk '{print $NF}' | sort | uniq -d)
+            [ -z "$dups" ] || { echo "::error::$t archive defines a symbol twice:"; echo "$dups"; exit 1; }
+            echo "  ok  $t ($sym)"
+          done
