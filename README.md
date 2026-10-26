@@ -76,3 +76,13 @@ llvm.libcxx               = "22.1.8.1"
 mcpp reports `compiler-runtime compiler-rt (compiler-rt-builtins@22.1.8.5, graph)`
 on those rows, and prints a degradation naming this package when the payload
 has no archive for the platform and the graph declares none.
+
+## The ok-image rows (22.1.8.6)
+
+For `x86_64-openkal` and `aarch64-openkal` (openkal SPEC clause 12) the
+package also builds the 128-bit routines, and on x86_64 the 80-bit ones: an ok
+image carries its own C library (openkal-musl), whose `printf` reaches the
+128-bit `long double` routines on AArch64. Every other row builds exactly the
+set it built before; the exclusions moved from the base set into a
+`cfg(not(os = "openkal"))` block, because a negative glob applies to the merged
+set and a positive in a later block could not have re-added a file.
