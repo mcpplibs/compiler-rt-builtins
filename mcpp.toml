@@ -75,7 +75,7 @@ name        = "compiler-rt-builtins"
 # mirrored, carrying different bytes. A version that has been published must
 # never come to mean something else, so the packaging revision is what moves.
 # A consumer writes `22.1.8.2` in full: a bare requirement in mcpp is an exact pin.
-version     = "22.1.8.5"
+version     = "22.1.8.6"
 description = "The compiler-rt builtins as a source package: LLVM's replacement for libgcc — the routines a compiler emits calls to — compiled with the consuming program's own flags"
 # The effective grant, which is what an SBOM consumer needs. 342 of the 347
 # vendored files carry this identifier in an SPDX header; `LICENSE.compiler-rt`
@@ -110,7 +110,6 @@ sources = [
   # thumbv7m-none-eabi` compiled 770 objects and not one from `builtins/arm`,
   # and the link failed on `__aeabi_uldivmod`.
 
-  "!builtins/addtf3.c",
   "!builtins/atomic.c",
   "!builtins/atomic_flag_clear.c",
   "!builtins/atomic_flag_clear_explicit.c",
@@ -118,15 +117,34 @@ sources = [
   "!builtins/atomic_flag_test_and_set_explicit.c",
   "!builtins/atomic_signal_fence.c",
   "!builtins/atomic_thread_fence.c",
-  "!builtins/comparetf2.c",
   "!builtins/crtbegin.c",
   "!builtins/crtend.c",
-  "!builtins/divtc3.c",
-  "!builtins/divtf3.c",
-  "!builtins/divxc3.c",
   "!builtins/emutls.c",
   "!builtins/enable_execute_stack.c",
   "!builtins/eprintf.c",
+]
+
+# ── The 128-bit and 80-bit routines, by target ───────────────────
+#
+# Every row before 22.1.8.6 excluded them, and still does, through the block
+# below: ARM has neither format, and the bare-metal rows' C library does not
+# reach them. The rows that do are the ok images (`<arch>-openkal`, openkal SPEC
+# clause 12), whose C library is built from source inside the image: on
+# AArch64 a `long double` is 128 bits and `printf' formats it through
+# `__extenddftf2', `__multf3' and their relatives --- measured, an image over
+# openkal-musl was refused by `okld check` for importing six of them --- and
+# on x86_64 it is 80 bits, whose complex arithmetic is `__mulxc3'.
+#
+# A NEGATIVE GLOB IS APPLIED TO THE MERGED SET (see `[build]` above), so the
+# exclusions moved out of the base set into a block that every other target
+# matches; a positive in an openkal block could not have re-added them.
+[target.'cfg(not(os = "openkal"))'.build]
+sources = [
+  "!builtins/addtf3.c",
+  "!builtins/comparetf2.c",
+  "!builtins/divtc3.c",
+  "!builtins/divtf3.c",
+  "!builtins/divxc3.c",
   "!builtins/extendbfsf2.c",
   "!builtins/extenddftf2.c",
   "!builtins/extendhftf2.c",
@@ -166,6 +184,28 @@ sources = [
   "!builtins/trunctfdf2.c",
   "!builtins/trunctfhf2.c",
   "!builtins/trunctfsf2.c",
+  "!builtins/trunctfxf2.c",
+  "!builtins/truncxfbf2.c",
+  "!builtins/truncxfhf2.c",
+]
+
+# AArch64 has no 80-bit format: the 128-bit routines stay, the 80-bit ones go.
+[target.'cfg(all(os = "openkal", arch = "aarch64"))'.build]
+sources = [
+  "!builtins/divxc3.c",
+  "!builtins/extendhfxf2.c",
+  "!builtins/extendxftf2.c",
+  "!builtins/fixunsxfdi.c",
+  "!builtins/fixunsxfsi.c",
+  "!builtins/fixunsxfti.c",
+  "!builtins/fixxfdi.c",
+  "!builtins/fixxfti.c",
+  "!builtins/floatdixf.c",
+  "!builtins/floattixf.c",
+  "!builtins/floatundixf.c",
+  "!builtins/floatuntixf.c",
+  "!builtins/mulxc3.c",
+  "!builtins/powixf2.c",
   "!builtins/trunctfxf2.c",
   "!builtins/truncxfbf2.c",
   "!builtins/truncxfhf2.c",
